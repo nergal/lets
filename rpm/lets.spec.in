@@ -1,0 +1,72 @@
+%define webdir        /var/www/@PKGNAME@
+%define logdir        /var/log/nginx
+%define httpdconfdir  /etc/nginx/conf.d
+%define httpdinitdir  /etc/init.d
+
+Name:           @PKGNAME@
+Version:        @VERSION@
+Release:        1%{?dist}
+Summary:        LETs
+
+Group:          Applications/Publishing
+License:        GPLv3+
+URL:            http://lets.ua/
+BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root
+
+BuildArch:      noarch
+Source:         %{name}-%{version}.tar.gz
+
+# BuildRequires:  unzip
+Requires:        redhat-lsb nginx Django python python-flup
+Requires(post):  /sbin/chkconfig
+Requires(preun): /sbin/chkconfig
+Requires(preun): /sbin/service
+
+# rsvg-convert is used to render icons...
+# Requires:       librsvg2
+
+Obsoletes:      @PKGNAME@
+Provides:       @PKGNAME@
+
+%description
+This is a web application based on Python and Django wich uses
+rpm packages for deploy environment. TODO: Change this desc.
+
+%prep
+%setup -q -n %{name}-%{version}
+
+find . -type f \! -name \*.py -exec chmod a-x {} \;
+find . -name \*.py -exec chmod a+x {} \;
+
+%build
+#rm settings.py
+
+%install
+rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT%{webdir}
+mkdir -p $RPM_BUILD_ROOT%{logdir}
+cp -a * $RPM_BUILD_ROOT%{webdir}
+install -p -D -m 0644 rpm/lets.conf $RPM_BUILD_ROOT%{httpdconfdir}/@PKGNAME@.conf
+sed -i 's#__PKGNAME__#@PKGNAME@#g' $RPM_BUILD_ROOT%{httpdconfdir}/@PKGNAME@.conf
+install -p -D -m 0755 rpm/lets-fcgi.sh $RPM_BUILD_ROOT%{httpdinitdir}/@PKGNAME@-fcgi
+sed -i 's#__PKGNAME__#@PKGNAME@#g' $RPM_BUILD_ROOT%{httpdinitdir}/@PKGNAME@-fcgi
+install -p -D -m 0644 $RPM_BUILD_ROOT%{webdir}/settings-dist.py $RPM_BUILD_ROOT%{webdir}/settings.py
+rm -fr $RPM_BUILD_ROOT%{webdir}/rpm
+rm $RPM_BUILD_ROOT%{webdir}/Makefile
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%preun
+
+%files
+%defattr(-,root,root)
+%doc README*
+%attr(775,root,root) %{webdir}
+%dir %{webdir}
+%config(noreplace) %{webdir}/settings.py
+%attr(755,root,root) %{logdir}
+%config(noreplace) %{httpdconfdir}/@PKGNAME@.conf
+%config(noreplace) %{httpdinitdir}/@PKGNAME@-fcgi
+
+%changelog
